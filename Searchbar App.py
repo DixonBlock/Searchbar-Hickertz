@@ -258,11 +258,12 @@ csv = res_view.to_csv(index=False).encode("utf-8")
 st.download_button(_("download_btn"), data=csv, file_name="quick_finder_results.csv", mime="text/csv")
 
 st.markdown("---")
-with st.expander(_("tips")):
-    st.markdown(_("tips_md"))
 
-- Put phrases in quotes: `"gouda young"`
+with st.expander("Tips"):
+    st.markdown("""
+- Put phrases in quotes: "gouda young"
 - Toggle **Any/All** to control whether all terms must appear.
 - Use **Starts with** for prefix searches like vendor codes.
 - Use **Exact match** for precise SKU/ID lookups.
 - Add more columns to results via **Output columns**.
+    """)
