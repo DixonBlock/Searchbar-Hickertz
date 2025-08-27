@@ -14,25 +14,59 @@ st.caption("Search your existing Excel/CSV and get just the fields you need.")
 # Helpers
 # -----------------------------
 @st.cache_data(show_spinner=False)
-def load_file(file_bytes: bytes, filename: str, sheet_name=None):
-    """Load CSV or Excel from bytes. Returns a DataFrame."""
+
+def load_file(file_bytes: bytes, filename: str, sheet_name=None) -> pd.DataFrame:
+    """Load CSV or Excel from bytes. Returns a DataFrame. Robust to EU CSVs."""
     name_lower = (filename or "").lower()
+
+    # 1) Excel by extension
     if name_lower.endswith((".xlsx", ".xls")):
         try:
-            return pd.read_excel(io.BytesIO(file_bytes), sheet_name=sheet_name)
+            # pick specific sheet or first sheet
+            target_sheet = 0 if (sheet_name in (None, "", "None")) else sheet_name
+            return pd.read_excel(io.BytesIO(file_bytes), sheet_name=target_sheet, dtype=str)
         except Exception as e:
             raise RuntimeError(f"Failed to read Excel file: {e}")
-    else:
-        # try utf-8, fallback to latin-1
-        for enc in ("utf-8", "latin-1"):
-            try:
-                return pd.read_csv(io.BytesIO(file_bytes), encoding=enc)
-            except Exception:
-                continue
-        raise RuntimeError("Failed to read CSV. Try saving as UTF-8 or Excel.")
 
-def normalize_col(col: str) -> str:
-    return re.sub(r'[^a-z0-9]+', ' ', str(col).strip().lower()).strip()
+    # 2) Some users export Excel but rename to .csv — detect and handle that:
+    try:
+        # If this succeeds, it was actually an Excel file with a .csv name
+        xls = pd.ExcelFile(io.BytesIO(file_bytes))
+        first = xls.sheet_names[0]
+        return pd.read_excel(xls, sheet_name=first, dtype=str)
+    except Exception:
+        pass  # not an excel file, proceed as CSV
+
+    # 3) CSV: try multiple encodings + delimiter inference
+    encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
+    # primary attempt: let pandas infer delimiter via engine='python'
+    for enc in encodings:
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), engine="python", sep=None, encoding=enc, dtype=str)
+            if df.shape[1] > 1:
+                return df
+            # If only one column, try common EU/alt delimiters explicitly
+            for sep in [";", "\t", "|", ","]:
+                try:
+                    df2 = pd.read_csv(io.BytesIO(file_bytes), engine="python", sep=sep, encoding=enc, dtype=str)
+                    if df2.shape[1] > 1:
+                        return df2
+                except Exception:
+                    continue
+            # still 1 column? accept but warn later upstream if you want
+            return df
+        except Exception:
+            continue
+
+    # 4) Last-resort: very tolerant read (replaces bad chars)
+    try:
+        df = pd.read_csv(io.BytesIO(file_bytes), engine="python", sep=None, encoding="latin-1", on_bad_lines="skip", dtype=str)
+        return df
+    except Exception:
+        pass
+
+    raise RuntimeError("Failed to read CSV. Try re-exporting as UTF-8 or Excel (.xlsx).")
+
 
 def best_default_output_cols(cols):
     """Pick default output columns based on common names, else first four."""
