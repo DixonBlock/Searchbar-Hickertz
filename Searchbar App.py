@@ -1,130 +1,59 @@
-
 import io
-import os
 import re
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Hickertz Article Search", page_icon="🧀", layout="wide")
+st.set_page_config(page_title="Quick Finder", page_icon="🧀", layout="wide")
 
-st.title("🧀 Hickertz Warehouse Article Quick Search")
+st.title("🧀 Quick Finder — Warehouse Article Search")
 st.caption("Search your existing Excel/CSV and get just the fields you need.")
 
 # -----------------------------
 # Helpers
 # -----------------------------
 @st.cache_data(show_spinner=False)
-
-def load_file(file_bytes: bytes, filename: str, sheet_name=None) -> pd.DataFrame:
-    """Load CSV or Excel from bytes. Returns a DataFrame. Robust to EU CSVs."""
+def load_file(file_bytes: bytes, filename: str, sheet_name=None):
+    """Load CSV or Excel from bytes. Returns a DataFrame."""
     name_lower = (filename or "").lower()
-
-    # 1) Excel by extension
     if name_lower.endswith((".xlsx", ".xls")):
         try:
-            # pick specific sheet or first sheet
-            target_sheet = 0 if (sheet_name in (None, "", "None")) else sheet_name
+            # If no sheet specified, use the first sheet
+            target_sheet = 0 if sheet_name in (None, "", "None") else sheet_name
             return pd.read_excel(io.BytesIO(file_bytes), sheet_name=target_sheet, dtype=str)
         except Exception as e:
             raise RuntimeError(f"Failed to read Excel file: {e}")
+    else:
+        # CSV fallback: try several encodings and delimiters
+        encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
+        for enc in encodings:
+            try:
+                df = pd.read_csv(io.BytesIO(file_bytes), encoding=enc, sep=None, engine="python", dtype=str)
+                if df.shape[1] > 1:
+                    return df
+            except Exception:
+                continue
+        raise RuntimeError("Failed to read CSV. Try re-exporting as UTF-8 or Excel (.xlsx).")
 
-    # 2) Some users export Excel but rename to .csv — detect and handle that:
-    try:
-        # If this succeeds, it was actually an Excel file with a .csv name
-        xls = pd.ExcelFile(io.BytesIO(file_bytes))
-        first = xls.sheet_names[0]
-        return pd.read_excel(xls, sheet_name=first, dtype=str)
-    except Exception:
-        pass  # not an excel file, proceed as CSV
-
-    # 3) CSV: try multiple encodings + delimiter inference
-    encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
-    # primary attempt: let pandas infer delimiter via engine='python'
-    for enc in encodings:
-        try:
-            df = pd.read_csv(io.BytesIO(file_bytes), engine="python", sep=None, encoding=enc, dtype=str)
-            if df.shape[1] > 1:
-                return df
-            # If only one column, try common EU/alt delimiters explicitly
-            for sep in [";", "\t", "|", ","]:
-                try:
-                    df2 = pd.read_csv(io.BytesIO(file_bytes), engine="python", sep=sep, encoding=enc, dtype=str)
-                    if df2.shape[1] > 1:
-                        return df2
-                except Exception:
-                    continue
-            # still 1 column? accept but warn later upstream if you want
-            return df
-        except Exception:
-            continue
-
-    # 4) Last-resort: very tolerant read (replaces bad chars)
-    try:
-        df = pd.read_csv(io.BytesIO(file_bytes), engine="python", sep=None, encoding="latin-1", on_bad_lines="skip", dtype=str)
-        return df
-    except Exception:
-        pass
-
-    raise RuntimeError("Failed to read CSV. Try re-exporting as UTF-8 or Excel (.xlsx).")
-
+def normalize_col(col: str) -> str:
+    """Normalize a column name for matching (lowercase, alphanumeric)."""
+    return re.sub(r'[^a-z0-9]+', ' ', str(col).strip().lower()).strip()
 
 def best_default_output_cols(cols):
     """Pick default output columns based on common names, else first four."""
     wanted = [
-        ["article number","articlenumber","article no","article_no","article#","Art. Nr.","item number","itemno","sku","sku number","artikelnummer","artikel nummer"],
-        ["description","desc","artikel","produktbeschreibung","Beschreibung","item description"],
-        ["main vendor","vendor","supplier","lieferant", "Lieferant (Haupt)", "primary supplier","primary vendor","main supplier"],
-        ["article type","type","category","kategorie","warengruppe", "Neue LP","artikeltyp"]
+        ["article number","articlenumber","article no","artikelnummer","item number","sku"],
+        ["description","desc","item description"],
+        ["main vendor","vendor","supplier","lieferant"],
+        ["article type","type","category","kategorie","warengruppe"],
     ]
     norm_index = {normalize_col(c): c for c in cols}
     picked = []
     for aliases in wanted:
-        found = None
         for alias in aliases:
-            if alias in norm_index:
-                found = norm_index[alias]
+            if alias in norm_index and norm_index[alias] not in picked:
+                picked.append(norm_index[alias])
                 break
-        if found and found not in picked:
-            picked.append(found)
-    # Fill up to four if needed
-    for c in cols:
-        if len(picked) >= 4:
-            break
-        if c not in picked:
-            picked.append(c)
-    return picked[:4]
-
-def search_df(df, query, search_cols, mode="any", case=False, startswith=False, exact=False):
-    if not query:
-        return df
-    # Split on spaces for multi-term search, respecting quoted phrases
-    terms = re.findall(r'"([^"]+)"|(\S+)', query)
-    terms = [t[0] or t[1] for t in terms if (t[0] or t[1])]
-    if not terms:
-        terms = [query]
-
-    def make_matcher(series: pd.Series, term: str):
-        if not case:
-            series = series.str.lower()
-            term = term.lower()
-        if exact:
-            return series == term
-        if startswith:
-            return series.str.startswith(term, na=False)
-        return series.str.contains(re.escape(term), na=False)
-
-    # Build boolean mask
-    mask = pd.Series(False, index=df.index)
-    for term in terms:
-        col_matches = pd.Series(False, index=df.index)
-        for c in search_cols:
-            s = df[c].astype(str)
-            col_matches = col_matches | make_matcher(s, term)
-        if mode == "all":
-            mask = mask & col_matches if mask.any() else col_matches
-        else:  # any
-            mask = mask | col_matches
-    return df[mask]
+    return picked[:4] if picked else cols[:4]
 
 # -----------------------------
 # Sidebar: Data source
