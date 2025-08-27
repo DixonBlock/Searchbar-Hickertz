@@ -55,6 +55,43 @@ def best_default_output_cols(cols):
                 break
     return picked[:4] if picked else cols[:4]
 
+def search_df(df, query, search_cols, mode="any", case=False, startswith=False, exact=False):
+    """Search the DataFrame for one or more terms across given columns."""
+    if not query:
+        return df
+
+    # Split into terms, supporting quoted phrases
+    import re
+    terms = re.findall(r'"([^"]+)"|(\S+)', query)
+    terms = [t[0] or t[1] for t in terms if (t[0] or t[1])]
+    if not terms:
+        terms = [query]
+
+    def make_matcher(series: pd.Series, term: str):
+        if not case:
+            series = series.str.lower()
+            term = term.lower()
+        if exact:
+            return series == term
+        if startswith:
+            return series.str.startswith(term, na=False)
+        return series.str.contains(re.escape(term), na=False)
+
+    # Build mask
+    mask = pd.Series(True if mode == "all" else False, index=df.index)
+    for term in terms:
+        col_matches = pd.Series(False, index=df.index)
+        for c in search_cols:
+            s = df[c].astype(str)
+            col_matches = col_matches | make_matcher(s, term)
+        if mode == "all":
+            mask = mask & col_matches
+        else:  # any
+            mask = mask | col_matches
+
+    return df[mask]
+
+
 # -----------------------------
 # Sidebar: Data source
 # -----------------------------
