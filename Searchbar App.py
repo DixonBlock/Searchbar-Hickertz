@@ -97,8 +97,8 @@ def _(key: str, **fmt) -> str:
 # -------------------------------------------------------------------------------
 
 
-st.title("🧀 Quick Finder — Warehouse Article Search")
-st.caption("Search your existing Excel/CSV and get just the fields you need.")
+st.title(_("title"))
+st.caption(_("caption"))
 
 # -----------------------------
 # Helpers
@@ -188,8 +188,8 @@ def search_df(df, query, search_cols, mode="any", case=False, startswith=False, 
 # Sidebar: Data source
 # -----------------------------
 with st.sidebar:
-    st.header("Data Source")
-    up = st.file_uploader("Upload your Excel or CSV file", type=["csv","xlsx","xls"])
+    st.header(_("data_source"))
+up = st.file_uploader(_("upload_label"), type=["csv","xlsx","xls"])
     sheet = None
     if up and up.name.lower().endswith((".xlsx",".xls")):
         sheet = st.text_input("Excel sheet name (optional)", value="")
@@ -199,47 +199,41 @@ with st.sidebar:
         try:
             df = load_file(up.getvalue(), up.name, sheet_name=sheet)
         except Exception as e:
-            st.error(str(e))
+            st.error(_("sheet_list_error", e=e))
             st.stop()
     else:
-        st.info("Upload a CSV or Excel file to begin.")
+        st.info(_("need_upload"))
         st.stop()
 
 # Clean column names for selection controls but keep originals
 all_columns = list(df.columns)
-st.write(f"**Loaded rows:** {len(df):,} — **Columns:** {len(all_columns)}")
+st.write(_("loaded_counts", rows=len(df), cols=len(df.columns)))
 
 # -----------------------------
 # Search controls
 # -----------------------------
-search_query = st.text_input("Search terms (use quotes for phrases)", placeholder='e.g., "gouda young" 12345 acme')
-col_choice = st.multiselect(
-    "Columns to search (default: all)",
-    options=all_columns,
-    default=all_columns,
-)
+search_query = st.text_input(_("search_terms"), placeholder=_("search_placeholder"))
+col_choice = st.multiselect(_("columns_to_search"), options=all_columns, default=all_columns)
 
-mode = st.radio("Match terms using", options=["Any term", "All terms"], horizontal=True, index=0)
-mode_key = "any" if mode == "Any term" else "all"
+
+mode = st.radio(_("match_terms_using"), options=[_("any_term"), _("all_terms")], horizontal=True, index=0)
+mode_key = "any" if mode == _("any_term") else "all"
+
 
 c1, c2, c3 = st.columns(3)
 with c1:
-    startswith = st.checkbox("Starts with", value=False, help="Match only the beginning of words/fields.")
+startswith = st.checkbox(_("starts_with"), value=False)
 with c2:
-    exact = st.checkbox("Exact match", value=False, help="Exact field match.")
+    exact = st.checkbox(_("exact_match"), value=False)
 with c3:
-    case = st.checkbox("Case sensitive", value=False)
+    case = st.checkbox(_("case_sensitive"), value=False)
 
 # -----------------------------
 # Output columns
 # -----------------------------
 default_out = best_default_output_cols(all_columns)
-out_cols = st.multiselect(
-    "Output columns (add or remove as needed)",
-    options=all_columns,
-    default=default_out,
-    help="By default shows Article Number, Description, Main Vendor, and Article Type if found."
-)
+out_cols = st.multiselect(_("output_columns"), options=all_columns, default=default_out, help=_("output_help"))
+
 
 # -----------------------------
 # Do the search
@@ -253,20 +247,20 @@ if not out_cols:
 
 res_view = res[out_cols].copy()
 
-st.subheader("Results")
-st.caption("Showing only selected output columns.")
-st.dataframe(res_view, use_container_width=True, hide_index=True)
+st.subheader(_("results"))
+st.caption(_("results_caption"))
+st.dataframe(res_view, width="stretch", hide_index=True)
 
 # Summary + download
-st.write(f"**Matches:** {len(res_view):,}")
+st.write(_("matches", n=len(res_view)))
 
 csv = res_view.to_csv(index=False).encode("utf-8")
-st.download_button("Download results as CSV", data=csv, file_name="quick_finder_results.csv", mime="text/csv")
+st.download_button(_("download_btn"), data=csv, file_name="quick_finder_results.csv", mime="text/csv")
 
 st.markdown("---")
-with st.expander("Tips"):
-    st.markdown(
-        """
+with st.expander(_("tips")):
+    st.markdown(_("tips_md"))
+
 - Put phrases in quotes: `"gouda young"`
 - Toggle **Any/All** to control whether all terms must appear.
 - Use **Starts with** for prefix searches like vendor codes.
