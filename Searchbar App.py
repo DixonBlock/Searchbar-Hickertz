@@ -216,18 +216,17 @@ st.write(_("loaded_counts", rows=len(df), cols=len(df.columns)))
 search_query = st.text_input(_("search_terms"), placeholder=_("search_placeholder"))
 col_choice = st.multiselect(_("columns_to_search"), options=all_columns, default=all_columns)
 
-
 mode = st.radio(_("match_terms_using"), options=[_("any_term"), _("all_terms")], horizontal=True, index=0)
 mode_key = "any" if mode == _("any_term") else "all"
 
-
 c1, c2, c3 = st.columns(3)
 with c1:
-startswith = st.checkbox(_("starts_with"), value=False)
+    startswith = st.checkbox(_("starts_with"), value=False)
 with c2:
     exact = st.checkbox(_("exact_match"), value=False)
 with c3:
     case = st.checkbox(_("case_sensitive"), value=False)
+
 
 # -----------------------------
 # Output columns
