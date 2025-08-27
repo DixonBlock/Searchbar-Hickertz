@@ -5,9 +5,9 @@ import re
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Quick Finder", page_icon="🧀", layout="wide")
+st.set_page_config(page_title="Hickertz Article Search", page_icon="🧀", layout="wide")
 
-st.title("🧀 Quick Finder — Warehouse Article Search")
+st.title("🧀 Hickertz Warehouse Article Quick Search")
 st.caption("Search your existing Excel/CSV and get just the fields you need.")
 
 # -----------------------------
@@ -15,7 +15,7 @@ st.caption("Search your existing Excel/CSV and get just the fields you need.")
 # -----------------------------
 @st.cache_data(show_spinner=False)
 def load_file(file_bytes: bytes, filename: str, sheet_name=None):
-    \"\"\"Load CSV or Excel from bytes. Returns a DataFrame.\"\"\"
+    """Load CSV or Excel from bytes. Returns a DataFrame."""
     name_lower = (filename or "").lower()
     if name_lower.endswith((".xlsx", ".xls")):
         try:
@@ -35,12 +35,12 @@ def normalize_col(col: str) -> str:
     return re.sub(r'[^a-z0-9]+', ' ', str(col).strip().lower()).strip()
 
 def best_default_output_cols(cols):
-    \"\"\"Pick default output columns based on common names, else first four.\"\"\"
+    """Pick default output columns based on common names, else first four."""
     wanted = [
-        ["article number","articlenumber","article no","article_no","article#","item number","itemno","sku","sku number","artikelnummer","artikel nummer"],
-        ["description","desc","artikel","produktbeschreibung","item description"],
-        ["main vendor","vendor","supplier","lieferant","primary supplier","primary vendor","main supplier"],
-        ["article type","type","category","kategorie","warengruppe","artikeltyp"]
+        ["article number","articlenumber","article no","article_no","article#","Art. Nr.","item number","itemno","sku","sku number","artikelnummer","artikel nummer"],
+        ["description","desc","artikel","produktbeschreibung","Beschreibung","item description"],
+        ["main vendor","vendor","supplier","lieferant", "Lieferant (Haupt)", "primary supplier","primary vendor","main supplier"],
+        ["article type","type","category","kategorie","warengruppe", "Neue LP","artikeltyp"]
     ]
     norm_index = {normalize_col(c): c for c in cols}
     picked = []
