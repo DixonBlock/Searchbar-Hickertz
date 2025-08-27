@@ -191,9 +191,9 @@ with st.sidebar:
     st.header(_("data_source"))
 up = st.file_uploader(_("upload_label"), type=["csv","xlsx","xls"])
 sheet = None
-    if up and up.name.lower().endswith((".xlsx",".xls")):
-        sheet = st.text_input("Excel sheet name (optional)", value="")
-        sheet = sheet or None
+if up and up.name.lower().endswith((".xlsx",".xls")):
+sheet = st.text_input("Excel sheet name (optional)", value="")
+sheet = sheet or None
 
     if up:
         try:
