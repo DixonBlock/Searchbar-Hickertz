@@ -266,5 +266,3 @@ with st.expander(_("tips")):
 - Use **Starts with** for prefix searches like vendor codes.
 - Use **Exact match** for precise SKU/ID lookups.
 - Add more columns to results via **Output columns**.
-        """
-    )
