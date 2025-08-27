@@ -17,8 +17,8 @@ LANG = "de" if lang_de else "en"
 
 T = {
     "title": {
-        "en": "🧀 Quick Finder — Warehouse Article Search",
-        "de": "🧀 Quick Finder — Lager-Artikel-Suche",
+        "en": "🧀 HICKERTZ Nissels Article Search",
+        "de": "🧀 HICKERTZ Nissels-Artikel-Suche",
     },
     "caption": {
         "en": "Search your existing Excel/CSV and get just the fields you need.",
