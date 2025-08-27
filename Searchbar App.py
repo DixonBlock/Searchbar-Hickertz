@@ -5,6 +5,98 @@ import streamlit as st
 
 st.set_page_config(page_title="Quick Finder", page_icon="🧀", layout="wide")
 
+# ---- i18n: language toggle + translations -----------------------------------
+# Put this after st.set_page_config(...) and before any UI text
+import contextlib
+
+# Sidebar toggle (default English off). Change default by setting value=True.
+with st.sidebar:
+    lang_de = st.toggle("Deutsch", value=False)
+
+LANG = "de" if lang_de else "en"
+
+T = {
+    "title": {
+        "en": "🧀 Quick Finder — Warehouse Article Search",
+        "de": "🧀 Quick Finder — Lager-Artikel-Suche",
+    },
+    "caption": {
+        "en": "Search your existing Excel/CSV and get just the fields you need.",
+        "de": "Durchsuche deine vorhandene Excel/CSV und zeige nur die benötigten Felder an.",
+    },
+    "data_source": {"en": "Data Source", "de": "Datenquelle"},
+    "upload_label": {
+        "en": "Upload your Excel or CSV file",
+        "de": "Excel- oder CSV-Datei hochladen",
+    },
+    "choose_sheet": {"en": "Choose Excel sheet", "de": "Excel-Arbeitsblatt auswählen"},
+    "loaded_counts": {
+        "en": "**Loaded rows:** {rows:,} — **Columns:** {cols}",
+        "de": "**Geladene Zeilen:** {rows:,} — **Spalten:** {cols}",
+    },
+    "search_terms": {
+        "en": "Search terms (use quotes for phrases)",
+        "de": "Suchbegriffe (für Phrasen Anführungszeichen nutzen)",
+    },
+    "search_placeholder": {
+        "en": 'e.g., "gouda young" 12345 acme',
+        "de": 'z. B. „gouda jung“ 12345 acme',
+    },
+    "columns_to_search": {
+        "en": "Columns to search (default: all)",
+        "de": "Zu durchsuchende Spalten (Standard: alle)",
+    },
+    "match_terms_using": {"en": "Match terms using", "de": "Suchlogik"},
+    "any_term": {"en": "Any term", "de": "Mindestens ein Begriff"},
+    "all_terms": {"en": "All terms", "de": "Alle Begriffe"},
+    "starts_with": {"en": "Starts with", "de": "Beginnt mit"},
+    "exact_match": {"en": "Exact match", "de": "Exakte Übereinstimmung"},
+    "case_sensitive": {"en": "Case sensitive", "de": "Groß-/Kleinschreibung beachten"},
+    "output_columns": {
+        "en": "Output columns (add or remove as needed)",
+        "de": "Ausgabespalten (nach Bedarf anpassen)",
+    },
+    "output_help": {
+        "en": "By default shows Article Number, Description, Main Vendor, and Article Type if found.",
+        "de": "Standardmäßig werden Artikelnummer, Beschreibung, Hauptlieferant und Artikeltyp angezeigt (falls vorhanden).",
+    },
+    "results": {"en": "Results", "de": "Ergebnisse"},
+    "results_caption": {
+        "en": "Showing only selected output columns.",
+        "de": "Es werden nur die ausgewählten Ausgabespalten angezeigt.",
+    },
+    "matches": {"en": "**Matches:** {n:,}", "de": "**Treffer:** {n:,}"},
+    "download_btn": {
+        "en": "Download results as CSV",
+        "de": "Ergebnisse als CSV herunterladen",
+    },
+    "tips": {"en": "Tips", "de": "Tipps"},
+    "tips_md": {
+        "en": "- Put phrases in quotes: \"gouda young\"\n- Toggle **Any/All** to require all terms.\n- Use **Starts with** for prefixes (e.g., vendor codes).\n- Use **Exact match** for precise SKU/IDs.\n- Add more columns via **Output columns**.",
+        "de": "- Phrasen in Anführungszeichen setzen: „gouda jung“\n- **Mindestens ein/Alle** umschalten, um alle Begriffe zu verlangen.\n- **Beginnt mit** für Präfixe (z. B. Lieferantencodes).\n- **Exakte Übereinstimmung** für genaue SKU/IDs.\n- Weitere Spalten über **Ausgabespalten** hinzufügen.",
+    },
+    "need_upload": {
+        "en": "Upload a CSV or Excel file to begin.",
+        "de": "Zum Starten CSV- oder Excel-Datei hochladen.",
+    },
+    "sheet_list_error": {
+        "en": "Could not list Excel sheets: {e}",
+        "de": "Excel-Blätter konnten nicht geladen werden: {e}",
+    },
+    "read_error": {"en": "{e}", "de": "{e}"},
+}
+
+def _(key: str, **fmt) -> str:
+    """Translate helper with safe English fallback."""
+    with contextlib.suppress(Exception):
+        txt = T.get(key, {}).get(LANG) or T.get(key, {}).get("en")
+        if txt and fmt:
+            return txt.format(**fmt)
+        return txt or key
+    return key
+# -------------------------------------------------------------------------------
+
+
 st.title("🧀 Quick Finder — Warehouse Article Search")
 st.caption("Search your existing Excel/CSV and get just the fields you need.")
 
