@@ -214,10 +214,14 @@ st.write(_("loaded_counts", rows=len(df), cols=len(df.columns)))
 # Search controls
 # -----------------------------
 search_query = st.text_input(_("search_terms"), placeholder=_("search_placeholder"))
-col_choice = st.multiselect(_("columns_to_search"), options=all_columns, default=all_columns)
+with st.expander(_("columns_to_search"), expanded=False):
+    col_choice = st.multiselect("", options=all_columns, default=all_columns, label_visibility="collapsed")
 
-mode = st.radio(_("match_terms_using"), options=[_("any_term"), _("all_terms")], horizontal=True, index=0)
-mode_key = "any" if mode == _("any_term") else "all"
+# Match logic (default = ALL terms)
+options = [_("any_term"), _("all_terms")]
+mode = st.radio(_("match_terms_using"), options=options, horizontal=True, index=1)
+mode_key = "all" if mode == _("all_terms") else "any"
+
 
 c1, c2, c3 = st.columns(3)
 with c1:
@@ -232,7 +236,10 @@ with c3:
 # Output columns
 # -----------------------------
 default_out = best_default_output_cols(all_columns)
-out_cols = st.multiselect(_("output_columns"), options=all_columns, default=default_out, help=_("output_help"))
+with st.expander(_("output_columns"), expanded=False):
+    out_cols = st.multiselect(
+        "", options=all_columns, default=default_out, help=_("output_help"), label_visibility="collapsed"
+    )
 
 
 # -----------------------------
