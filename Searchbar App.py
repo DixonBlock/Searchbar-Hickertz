@@ -271,9 +271,6 @@ st.dataframe(res_view, width="stretch", hide_index=True)
 # Summary + download
 st.write(_("matches", n=len(res_view)))
 
-csv = res_view.to_csv(index=False).encode("utf-8")
-st.download_button(_("download_btn"), data=csv, file_name="quick_finder_results.csv", mime="text/csv")
-
 st.markdown("---")
 
 with st.expander("Tips"):
