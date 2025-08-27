@@ -254,9 +254,19 @@ if not out_cols:
 
 res_view = res[out_cols].copy()
 
-st.subheader(_("results"))
+# Summary + download placed next to title
+c_title, c_count, c_dl = st.columns([2, 1, 1])
+with c_title:
+    st.subheader(_("results"))
+with c_count:
+    st.write(_("matches", n=len(res_view)))
+with c_dl:
+    csv = res_view.to_csv(index=False).encode("utf-8")
+    st.download_button(_("download_btn"), data=csv, file_name="quick_finder_results.csv", mime="text/csv")
+
 st.caption(_("results_caption"))
 st.dataframe(res_view, width="stretch", hide_index=True)
+
 
 # Summary + download
 st.write(_("matches", n=len(res_view)))
