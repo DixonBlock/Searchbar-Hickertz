@@ -49,17 +49,6 @@ def load_default():
     raise RuntimeError("Default dataset could not be parsed. Try exporting as CSV UTF-8.")
 
 
-@st.cache_data(show_spinner=False)
-def load_default():
-
-    default_path=Path("default_data.csv")
-
-    if default_path.exists():
-        return pd.read_csv(default_path,dtype=str)
-
-    return None
-
-
 # ---------------------------------------------------
 # SEARCH
 # ---------------------------------------------------
