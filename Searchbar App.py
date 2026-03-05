@@ -6,6 +6,7 @@
 
 import io
 import re
+import unicodedata
 from pathlib import Path
 
 import pandas as pd
@@ -182,6 +183,12 @@ def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
         out[c] = out[c].astype(str).map(convert_one)
     return out
 
+def strip_accents(s: str) -> str:
+    # NFKD decomposes accented chars into base + combining marks
+    s = unicodedata.normalize("NFKD", str(s))
+    # remove combining marks
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    return s
 
 # ---------------------------------------------------
 # SEARCH
@@ -190,17 +197,29 @@ def search_df(df: pd.DataFrame, query: str, cols: list[str]) -> pd.DataFrame:
     if not query:
         return df
 
+    # Split into terms, supporting quoted phrases
     terms = re.findall(r'"([^"]+)"|(\S+)', query)
     terms = [t[0] or t[1] for t in terms if (t[0] or t[1])]
     if not terms:
         return df
 
+    # Normalize query (lower + strip accents)
+    terms_norm = [strip_accents(t).lower() for t in terms]
+
     mask = pd.Series(False, index=df.index)
-    for term in terms:
+
+    for term_norm in terms_norm:
+        # Match across any selected column
         matches = pd.Series(False, index=df.index)
-        term_esc = re.escape(term)
+
+        # Use escaped regex term
+        term_esc = re.escape(term_norm)
+
         for c in cols:
-            matches |= df[c].astype(str).str.contains(term_esc, case=False, na=False, regex=True)
+            # Normalize cell text (lower + strip accents) on the fly
+            s = df[c].astype(str).map(strip_accents).str.lower()
+            matches |= s.str.contains(term_esc, case=False, na=False, regex=True)
+
         mask |= matches
 
     return df[mask]
