@@ -96,10 +96,10 @@ all_columns = list(df.columns)
 
 # ===== Search input (Enter should focus the results grid) =====
 def _on_search_change():
-    # When the user hits Enter in the text input, Streamlit triggers on_change
     st.session_state.focus_results = True
 
-left, right = st.columns([3, 1], gap="large")
+# Give batch panel more room
+left, right = st.columns([2, 3], gap="large")
 
 with left:
     st.write(f"**Loaded rows:** {len(df):,} — **Columns:** {len(df.columns)}")
@@ -122,22 +122,49 @@ with left:
     res = search_df(df, (search_query or "").strip(), col_choice)
 
     st.subheader("Results")
-    st.caption("Tip: after you press Enter in the search box, the table should be focused. Use ↑↓ and Enter.")
+    st.caption("Keyboard flow: Enter in search → table focuses → ↑↓ to row → Enter adds to batch.")
 
     # =============================
-    # Results grid (keyboard friendly)
+    # Results grid (Enter selects focused row)
     # =============================
 
-    # JS: focus first cell when focus_results flag set
-    focus_js = JsCode(
+    enter_select_js = JsCode(
         """
         function(e) {
           try {
-            // Focus the first displayed row / first column cell
+            const key = e.event && e.event.key;
+            if (key !== 'Enter') return;
+
+            const api = e.api;
+            const focused = api.getFocusedCell();
+            if (!focused) return;
+
+            const rowNode = api.getDisplayedRowAtIndex(focused.rowIndex);
+            if (rowNode) {
+              // select focused row, clear other selection
+              rowNode.setSelected(true, true);
+              if (e.event.preventDefault) e.event.preventDefault();
+              if (e.event.stopPropagation) e.event.stopPropagation();
+            }
+          } catch(err) {}
+        }
+        """
+    )
+
+    focus_and_autosize_js = JsCode(
+        """
+        function(e) {
+          try {
+            // autosize columns to content (so results grid stays compact)
+            const allCols = [];
+            e.columnApi.getAllColumns().forEach(col => allCols.push(col));
+            e.columnApi.autoSizeColumns(allCols, false);
+
+            // focus first cell for arrow navigation
             const api = e.api;
             const firstRow = api.getDisplayedRowAtIndex(0);
             if (firstRow) {
-              const firstCol = api.getColumnDefs()[0].field;
+              const firstCol = e.columnApi.getAllColumns()[0].getColId();
               api.setFocusedCell(firstRow.rowIndex, firstCol);
             }
           } catch(err) {}
@@ -151,42 +178,46 @@ with left:
         filter=True,
         resizable=True,
         wrapText=False,
-        autoHeight=False
+        autoHeight=False,
+        minWidth=60,
     )
 
-    # single select, no checkbox; Enter works inside grid to select row
+    # single select, no checkbox
     gb.configure_selection(selection_mode="single", use_checkbox=False)
 
-    # Make grid nicer + keyboard behavior
     gb.configure_grid_options(
         suppressRowClickSelection=False,
         rowSelection="single",
         ensureDomOrder=True,
+        onCellKeyDown=enter_select_js,   # <-- Enter adds
     )
 
     grid_options = gb.build()
 
     # If we want focus after search, attach onFirstDataRendered
     if st.session_state.focus_results:
-        grid_options["onFirstDataRendered"] = focus_js
+        grid_options["onFirstDataRendered"] = focus_and_autosize_js
+    else:
+        # still autosize even without focus flag (keeps results compact)
+        grid_options["onFirstDataRendered"] = focus_and_autosize_js
 
     grid = AgGrid(
         res,
         gridOptions=grid_options,
-        height=460,
+        height=520,
         data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         allow_unsafe_jscode=True,
-        fit_columns_on_grid_load=True,
+        # IMPORTANT: don't force-fit columns (we autosize instead)
+        fit_columns_on_grid_load=False,
         key="results_grid",
     )
 
-    # Reset focus flag after render so it doesn't constantly re-focus
     st.session_state.focus_results = False
 
     selected_rows = grid.get("selected_rows", [])
 
-    # selected_rows might be list[dict] OR DataFrame depending on version/config
+    # st-aggrid can return list[dict] OR DataFrame depending on versions
     if isinstance(selected_rows, pd.DataFrame):
         has_selection = not selected_rows.empty
         sel_df = selected_rows if has_selection else None
@@ -196,8 +227,7 @@ with left:
 
     # Add selection to batch (only once per selection change)
     if has_selection and sel_df is not None and not sel_df.empty:
-        # Create a stable "selection key" so reruns don't keep re-adding same row
-        # Prefer Art. Nr. if it exists; else use first column + row index fallback
+        # Stable selection key: prefer Art. Nr.
         if "Art. Nr." in sel_df.columns:
             selection_key = f"ArtNr:{sel_df.loc[0, 'Art. Nr.']}"
         else:
@@ -206,22 +236,19 @@ with left:
         if selection_key != st.session_state.last_added_key:
             st.session_state.last_added_key = selection_key
 
-            # Ensure batch has same columns as source (ALL columns shown)
+            # Ensure batch has ALL columns
             if st.session_state.batch.empty:
-                st.session_state.batch = sel_df[all_columns].copy()
+                st.session_state.batch = sel_df.reindex(columns=all_columns).copy()
             else:
-                # align columns
-                for c in all_columns:
-                    if c not in sel_df.columns:
-                        sel_df[c] = ""
+                tmp = sel_df.reindex(columns=all_columns).copy()
                 st.session_state.batch = pd.concat(
-                    [st.session_state.batch, sel_df[all_columns]],
+                    [st.session_state.batch, tmp],
                     ignore_index=True
                 )
 
 with right:
     st.subheader("Batch List")
-    st.caption("Always visible. Duplicates allowed; highlighted in #007672. Drag to reorder.")
+    st.caption("Duplicates allowed (highlighted #007672). Drag to reorder. Select rows and delete.")
 
     batch = st.session_state.batch
 
@@ -235,15 +262,11 @@ with right:
             dup_mask = pd.Series(False, index=batch.index)
 
         # JS row style for duplicates
-        # Note: we rely on Art. Nr. column name exactly.
         dup_style_js = JsCode(
             """
             function(params) {
               try {
-                const art = params.data["Art. Nr."];
-                if (!art) return {};
-                // We'll mark duplicates by checking a hidden flag in data if present
-                if (params.data.__is_dup === true) {
+                if (params.data && params.data.__is_dup === true) {
                   return { 'backgroundColor': '#007672', 'color': 'white' };
                 }
                 return {};
@@ -257,24 +280,24 @@ with right:
 
         gb2 = GridOptionsBuilder.from_dataframe(batch_view)
 
+        # Let batch columns be wider/readable
         gb2.configure_default_column(
             sortable=True,
             filter=True,
             resizable=True,
+            minWidth=120,
+            wrapText=True,
+            autoHeight=False,
         )
 
-        # Drag reorder: use managed row drag
-        # We'll add a small drag handle column to make it obvious.
         gb2.configure_column("__is_dup", hide=True)
 
-        # If Art. Nr. exists, keep it visible, but do not force unique.
-        # Row drag: easiest is to enable it on the first visible column
+        # Enable drag on first visible column
         first_visible_col = None
         for c in all_columns:
             if c in batch_view.columns:
                 first_visible_col = c
                 break
-
         if first_visible_col:
             gb2.configure_column(first_visible_col, rowDrag=True)
 
@@ -285,26 +308,27 @@ with right:
             rowDragManaged=True,
             animateRows=True,
             getRowStyle=dup_style_js,
+            suppressHorizontalScroll=False,
         )
 
         batch_grid = AgGrid(
             batch_view[all_columns + ["__is_dup"]],
             gridOptions=gb2.build(),
-            height=460,
+            height=520,
             data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
             update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.SELECTION_CHANGED,
             allow_unsafe_jscode=True,
-            fit_columns_on_grid_load=True,
+            # IMPORTANT: do NOT fit-to-grid, so description columns can stay wide
+            fit_columns_on_grid_load=False,
             key="batch_grid",
         )
 
-        # Read back current order (after drag)
+        # Persist reordered data after drag
         new_batch_df = batch_grid.get("data", None)
         if isinstance(new_batch_df, pd.DataFrame) and not new_batch_df.empty:
-            # Drop helper column and keep all original columns
             if "__is_dup" in new_batch_df.columns:
                 new_batch_df = new_batch_df.drop(columns=["__is_dup"])
-            st.session_state.batch = new_batch_df[all_columns].copy()
+            st.session_state.batch = new_batch_df.reindex(columns=all_columns).copy()
 
         # Delete selected rows
         sel_batch = batch_grid.get("selected_rows", [])
@@ -319,18 +343,17 @@ with right:
                 if sel_batch_df.empty:
                     st.warning("No rows selected.")
                 else:
-                    # Delete by matching all column values (safe even with duplicates)
                     cur = st.session_state.batch.copy()
-                    # Build a set of row signatures to remove
-                    sigs = set()
+
+                    # Remove ONE occurrence per exact row match (duplicates allowed)
+                    sigs = []
                     for _, r in sel_batch_df.iterrows():
-                        sigs.add(tuple(str(r.get(col, "")) for col in all_columns))
+                        sigs.append(tuple(str(r.get(col, "")) for col in all_columns))
 
                     keep_rows = []
                     for _, r in cur.iterrows():
                         sig = tuple(str(r.get(col, "")) for col in all_columns)
                         if sig in sigs:
-                            # remove ONE occurrence per matching signature
                             sigs.remove(sig)
                         else:
                             keep_rows.append(r)
