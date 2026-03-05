@@ -19,23 +19,34 @@ if "batch" not in st.session_state:
 # ---------------------------------------------------
 
 @st.cache_data(show_spinner=False)
-def load_file(file_bytes, filename, sheet=None):
+def load_default():
 
-    if filename.lower().endswith(("xlsx","xls")):
-        target = 0 if not sheet else sheet
-        return pd.read_excel(io.BytesIO(file_bytes), sheet_name=target, dtype=str)
+    from pathlib import Path
 
-    encodings=["utf-8","utf-8-sig","cp1252","latin-1"]
+    default_path = Path("default_data.csv")
+
+    if not default_path.exists():
+        return None
+
+    encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
 
     for enc in encodings:
         try:
-            df=pd.read_csv(io.BytesIO(file_bytes),encoding=enc,sep=None,engine="python",dtype=str)
-            if df.shape[1]>1:
+            df = pd.read_csv(
+                default_path,
+                encoding=enc,
+                sep=None,          # auto-detect delimiter
+                engine="python",   # tolerant parser
+                dtype=str
+            )
+
+            if df.shape[1] > 1:
                 return df
-        except:
+
+        except Exception:
             continue
 
-    raise RuntimeError("Unable to read file")
+    raise RuntimeError("Default dataset could not be parsed. Try exporting as CSV UTF-8.")
 
 
 @st.cache_data(show_spinner=False)
