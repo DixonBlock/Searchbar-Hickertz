@@ -277,7 +277,7 @@ def reorder_columns(df: pd.DataFrame, first: list[str] | None = None) -> pd.Data
 st.title("🧀 Hickertz Quick Finder")
 
 controls = st.container()
-results_col, batch_col = st.columns([2.25, 1.75], gap="small")
+results_col, batch_col = st.columns([2.25, 1.75], gap="medium")
 
 
 # ---------------------------------------------------
@@ -391,10 +391,10 @@ with controls:
 with results_col:
     res = search_df(df, search_query.strip(), cols)
 
-    PREFERRED_ORDER = ["Art. Nr.", "Bezeichnung", "Lieferant", "Neue LP"]  # adjust to your headers
+    PREFERRED_ORDER = ["Art. Nr.", "Bezeichnung", "Neue LP", "Lieferant"]  # adjust to your headers
 res = reorder_columns(res, PREFERRED_ORDER)
     
-    st.subheader("Results")
+st.subheader("Results")
 
     gb = GridOptionsBuilder.from_dataframe(res)
     gb.configure_default_column(resizable=True, wrapText=True, autoHeight=True)
