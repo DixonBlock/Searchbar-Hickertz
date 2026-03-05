@@ -260,6 +260,16 @@ for col in df.columns:
 if article_col is None:
     article_col = df.columns[0]
 
+def reorder_columns(df: pd.DataFrame, first: list[str] | None = None) -> pd.DataFrame:
+    """
+    Move columns in `first` to the front (in that order), keep the rest after.
+    Ignores names that don't exist.
+    """
+    if not first:
+        return df
+    first_existing = [c for c in first if c in df.columns]
+    rest = [c for c in df.columns if c not in first_existing]
+    return df[first_existing + rest]
 
 # ---------------------------------------------------
 # UI
@@ -381,6 +391,9 @@ with controls:
 with results_col:
     res = search_df(df, search_query.strip(), cols)
 
+    PREFERRED_ORDER = ["Art. Nr.", "Bezeichnung", "Lieferant", "Neue LP"]  # adjust to your headers
+res = reorder_columns(res, PREFERRED_ORDER)
+    
     st.subheader("Results")
 
     gb = GridOptionsBuilder.from_dataframe(res)
@@ -434,6 +447,9 @@ with batch_col:
         else:
             dup_mask = pd.Series(False, index=batch.index)
 
+batch = reorder_columns(batch, PREFERRED_ORDER)
+st.session_state.batch = batch  # keep state consistent with new order
+        
         batch_view = batch.copy()
         batch_view["dup"] = dup_mask
 
