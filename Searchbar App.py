@@ -1,8 +1,8 @@
 # Searchbar App.py
 # Hickertz Quick Finder — keyboard-friendly results → batch list (duplicates allowed + highlighted)
-# Uses robust loader for BOTH uploads and default_data.csv (EU/US CSV compatible)
-# Layout: Search controls on top; Results (left) + Batch (right) underneath
-# Column widths: autosize-to-content with sensible caps; user-resizable
+# Dark mode + tight padding + robust loader (EU/US CSV compatible)
+# Layout: Controls on top; Results (left) + Batch (right) underneath
+# Column widths: autosize-to-content with caps + enforced minimums; user-resizable
 
 import io
 import re
@@ -20,6 +20,29 @@ from st_aggrid import (
 
 st.set_page_config(page_title="Quick Finder", page_icon="🧀", layout="wide")
 
+# ---------------------------------------------------
+# TIGHT UI (reduce padding / maximize data space)
+# ---------------------------------------------------
+st.markdown(
+    """
+<style>
+/* Reduce Streamlit default padding/margins */
+.block-container { padding-top: 0.6rem; padding-bottom: 0.6rem; padding-left: 0.6rem; padding-right: 0.6rem; }
+div[data-testid="stVerticalBlock"] { gap: 0.35rem; }
+div[data-testid="column"] { padding-left: 0.15rem; padding-right: 0.15rem; }
+
+/* Reduce header spacing */
+h1, h2, h3 { margin-top: 0.2rem; margin-bottom: 0.35rem; }
+
+/* Reduce widget spacing slightly */
+div[data-testid="stMultiselect"], div[data-testid="stTextInput"] { margin-bottom: 0.15rem; }
+
+/* Slightly tighten AgGrid wrapper spacing */
+.stAgGrid { margin-top: 0.15rem; margin-bottom: 0.15rem; }
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
 # ---------------------------------------------------
 # SESSION STATE
@@ -42,7 +65,7 @@ def _read_csv_bytes(file_bytes: bytes) -> pd.DataFrame:
                 io.BytesIO(file_bytes),
                 encoding=enc,
                 sep=None,          # auto-detect delimiter (, ; \t |)
-                engine="python",   # more tolerant parser
+                engine="python",   # tolerant parser
                 dtype=str,
                 keep_default_na=False,
             )
@@ -62,7 +85,6 @@ def load_file(file_bytes: bytes, filename: str, sheet=None) -> pd.DataFrame:
     name = (filename or "").lower()
     if name.endswith(("xlsx", "xls")):
         target = 0 if not sheet else sheet
-        # dtype=str keeps codes like 01-01 from becoming dates
         return pd.read_excel(io.BytesIO(file_bytes), sheet_name=target, dtype=str)
 
     return _read_csv_bytes(file_bytes)
@@ -106,7 +128,6 @@ MONTHS = {
 
 
 def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
-    """If an LP column contains '01. Jan' or date-like strings, convert to 'DD-MM' text."""
     cols = list(df.columns)
     lp_cols = []
     for c in cols:
@@ -128,12 +149,10 @@ def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
         if not s or s.lower() in ("nan", "none"):
             return ""
 
-        # Already looks like DD-MM (keep)
         if re.fullmatch(r"\d{1,2}-\d{1,2}", s):
             dd, mm = s.split("-")
             return f"{dd.zfill(2)}-{mm.zfill(2)}"
 
-        # "01. Jan" / "1. Jan" / "01. Januar"
         m = re.match(r"^\s*(\d{1,2})\.\s*([A-Za-zÄÖÜäöü\.]+)\s*$", s)
         if m:
             dd = m.group(1).zfill(2)
@@ -144,14 +163,12 @@ def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
             if mm:
                 return f"{dd}-{mm}"
 
-        # "2026-01-01" or "2026-01-01 00:00:00"
         m = re.match(r"^\s*(\d{4})[-/](\d{1,2})[-/](\d{1,2}).*$", s)
         if m:
             mm = m.group(2).zfill(2)
             dd = m.group(3).zfill(2)
             return f"{dd}-{mm}"
 
-        # Excel-ish "01/01/2026"
         m = re.match(r"^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4}).*$", s)
         if m:
             dd = m.group(1).zfill(2)
@@ -207,13 +224,12 @@ else:
         st.warning("Upload a file or include default_data.csv in the repo root.")
         st.stop()
 
-# Ensure everything is text + normalize LP values (fix default data showing dates/months)
 df = df.astype(str)
 df = normalize_lagerplatz_values(df)
 
 
 # ---------------------------------------------------
-# AUTO DETECT ARTICLE COLUMN
+# AUTO DETECT ARTICLE COLUMN (unique identifier)
 # ---------------------------------------------------
 possible_article_cols = ["Art. Nr.", "Art Nr", "Artikelnummer", "Article Number", "SKU"]
 
@@ -231,11 +247,13 @@ if article_col is None:
 # ---------------------------------------------------
 st.title("🧀 Hickertz Quick Finder")
 
-# Controls (search/filters) on top; then Results + Batch underneath
 controls = st.container()
-results_col, batch_col = st.columns([2.2, 1.8], gap="large")
+results_col, batch_col = st.columns([2.25, 1.75], gap="small")
 
-# JS: Enter selects focused row; prevents Streamlit focus weirdness
+
+# ---------------------------------------------------
+# JS helpers
+# ---------------------------------------------------
 enter_select = JsCode(
     """
 function(e){
@@ -245,39 +263,30 @@ function(e){
     const focused = api.getFocusedCell();
     if(!focused) return;
     const node = api.getDisplayedRowAtIndex(focused.rowIndex);
-    if(node){
-      node.setSelected(true, true);
-    }
+    if(node){ node.setSelected(true, true); }
     e.event.preventDefault();
   }
 }
 """
 )
 
-# JS: autosize-to-content with sensible caps; NO sizeColumnsToFit (prevents messed proportions)
+# Autosize + enforce mins (prevents Art.Nr shrinking past min)
 first_data_rendered = JsCode(
     """
 function(e){
   try{
     const allCols = e.columnApi.getAllColumns().map(c => c.getColId());
 
-    // Autosize to content
+    // Autosize to content first
     e.columnApi.autoSizeColumns(allCols, false);
 
-    // Cap overly wide columns so key text columns keep space
+    // Cap max and enforce mins
     allCols.forEach(id => {
+      const low = (id || '').toLowerCase();
       const col = e.columnApi.getColumn(id);
       if(!col) return;
 
       const w = col.getActualWidth();
-      const low = (id || '').toLowerCase();
-
-      const maxW =
-        (low.includes('beschreib') || low.includes('description')) ? 650 :
-        (low.includes('liefer')   || low.includes('vendor') || low.includes('supplier')) ? 360 :
-        (low.includes('art')      || low.includes('artikel') || low.includes('sku')) ? 160 :
-        (low.includes('lp')       || low.includes('lagerplatz')) ? 190 :
-        320;
 
       const minW =
         (low.includes('beschreib') || low.includes('description')) ? 260 :
@@ -286,8 +295,15 @@ function(e){
         (low.includes('lp')       || low.includes('lagerplatz')) ? 120 :
         120;
 
-      if(w > maxW) e.columnApi.setColumnWidth(id, maxW, false);
+      const maxW =
+        (low.includes('beschreib') || low.includes('description')) ? 650 :
+        (low.includes('liefer')   || low.includes('vendor') || low.includes('supplier')) ? 360 :
+        (low.includes('art')      || low.includes('artikel') || low.includes('sku')) ? 170 :
+        (low.includes('lp')       || low.includes('lagerplatz')) ? 200 :
+        320;
+
       if(w < minW) e.columnApi.setColumnWidth(id, minW, false);
+      if(w > maxW) e.columnApi.setColumnWidth(id, maxW, false);
     });
 
   } catch(err) {}
@@ -296,21 +312,33 @@ function(e){
 )
 
 
-def _apply_column_layout(gb: GridOptionsBuilder, cols: list[str]):
-    """Prefer wide text columns, keep ID/LP compact; still resizable."""
+def _apply_column_layout(gb: GridOptionsBuilder, cols: list[str], article_col_name: str | None = None):
+    """
+    Set reasonable min/max defaults but keep resizable.
+    IMPORTANT: also explicitly enforce the identifier (Art. Nr.) column.
+    """
     for c in cols:
         nc = _normalize_colname(c)
 
-        if "beschreib" in nc or "description" in nc:
-            gb.configure_column(c, minWidth=260, flex=3, wrapText=True, autoHeight=True)
-        elif "lieferant" in nc or "vendor" in nc or "supplier" in nc:
-            gb.configure_column(c, minWidth=180, flex=2, wrapText=True, autoHeight=True)
-        elif "artikelnummer" in nc or "article number" in nc or "sku" in nc or nc in ("art nr", "art nr.", "art. nr", "art. nr."):
-            gb.configure_column(c, width=120, minWidth=95, maxWidth=160, flex=0)
-        elif "lp" in nc or "lagerplatz" in nc:
-            gb.configure_column(c, width=140, minWidth=110, maxWidth=190, flex=0)
+        is_article = False
+        if article_col_name and c == article_col_name:
+            is_article = True
         else:
-            gb.configure_column(c, minWidth=120, flex=1, wrapText=True, autoHeight=True)
+            # fallback detection if exact name differs
+            if "artikelnummer" in nc or nc.startswith("art") or "sku" in nc or "article number" in nc:
+                is_article = True
+
+        if "beschreib" in nc or "description" in nc:
+            gb.configure_column(c, minWidth=260, maxWidth=650, flex=3, wrapText=True, autoHeight=True)
+        elif "lieferant" in nc or "vendor" in nc or "supplier" in nc:
+            gb.configure_column(c, minWidth=180, maxWidth=360, flex=2, wrapText=True, autoHeight=True)
+        elif is_article:
+            # hard minimum so it can't collapse into nonsense
+            gb.configure_column(c, minWidth=110, width=130, maxWidth=170, flex=0, wrapText=False)
+        elif "lp" in nc or "lagerplatz" in nc:
+            gb.configure_column(c, minWidth=120, width=150, maxWidth=200, flex=0, wrapText=False)
+        else:
+            gb.configure_column(c, minWidth=120, maxWidth=320, flex=1, wrapText=True, autoHeight=True)
 
 
 # ---------------------------------------------------
@@ -319,7 +347,6 @@ def _apply_column_layout(gb: GridOptionsBuilder, cols: list[str]):
 with controls:
     st.write(f"Rows loaded: {len(df):,}")
 
-    # moved above search input (as requested)
     cols = st.multiselect(
         "Columns to search",
         options=list(df.columns),
@@ -341,13 +368,15 @@ with results_col:
     gb.configure_default_column(resizable=True, wrapText=True, autoHeight=True)
     gb.configure_selection(selection_mode="single", use_checkbox=False)
 
-    _apply_column_layout(gb, list(res.columns))
+    _apply_column_layout(gb, list(res.columns), article_col_name=article_col)
 
     gb.configure_grid_options(
         onCellKeyDown=enter_select,
         onFirstDataRendered=first_data_rendered,
         suppressRowClickSelection=False,
         rowSelection="single",
+        # helps keep navigation smooth
+        suppressCellFocus=False,
     )
 
     grid = AgGrid(
@@ -358,13 +387,13 @@ with results_col:
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=False,
-        theme="alpine",
+        theme="streamlit",  # <- dark-mode friendly (matches Streamlit theme)
     )
 
     selected = grid.get("selected_rows", [])
     sel_df = selected if isinstance(selected, pd.DataFrame) else pd.DataFrame(selected)
 
-    # Allow duplicates (append whatever was selected)
+    # Allow duplicates
     if not sel_df.empty:
         st.session_state.batch = pd.concat([st.session_state.batch, sel_df], ignore_index=True)
 
@@ -411,13 +440,14 @@ function(params){
         # Delete selected rows via checkbox selection
         gb2.configure_selection("multiple", use_checkbox=True)
 
-        _apply_column_layout(gb2, [c for c in batch_view.columns if c != "dup"])
+        _apply_column_layout(gb2, [c for c in batch_view.columns if c != "dup"], article_col_name=article_col)
 
         gb2.configure_grid_options(
             rowDragManaged=True,
             animateRows=True,
             getRowStyle=highlight,
             onFirstDataRendered=first_data_rendered,
+            suppressCellFocus=False,
         )
 
         batch_grid = AgGrid(
@@ -428,7 +458,7 @@ function(params){
             update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.SELECTION_CHANGED,
             allow_unsafe_jscode=True,
             fit_columns_on_grid_load=False,
-            theme="alpine",
+            theme="streamlit",  # <- dark-mode friendly
         )
 
         new_data = batch_grid.get("data")
