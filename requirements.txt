@@ -3,3 +3,4 @@ streamlit
 pandas
 openpyxl
 streamlit-elements==0.1.0
+streamlit-aggrid
