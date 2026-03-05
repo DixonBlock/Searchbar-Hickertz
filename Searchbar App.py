@@ -183,12 +183,14 @@ def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
         out[c] = out[c].astype(str).map(convert_one)
     return out
 
+
 def strip_accents(s: str) -> str:
     # NFKD decomposes accented chars into base + combining marks
     s = unicodedata.normalize("NFKD", str(s))
     # remove combining marks
     s = "".join(ch for ch in s if not unicodedata.combining(ch))
     return s
+
 
 # ---------------------------------------------------
 # SEARCH
@@ -260,6 +262,7 @@ for col in df.columns:
 if article_col is None:
     article_col = df.columns[0]
 
+
 def reorder_columns(df: pd.DataFrame, first: list[str] | None = None) -> pd.DataFrame:
     """
     Move columns in `first` to the front (in that order), keep the rest after.
@@ -270,6 +273,7 @@ def reorder_columns(df: pd.DataFrame, first: list[str] | None = None) -> pd.Data
     first_existing = [c for c in first if c in df.columns]
     rest = [c for c in df.columns if c not in first_existing]
     return df[first_existing + rest]
+
 
 # ---------------------------------------------------
 # UI
@@ -392,9 +396,9 @@ with results_col:
     res = search_df(df, search_query.strip(), cols)
 
     PREFERRED_ORDER = ["Art. Nr.", "Bezeichnung", "Neue LP", "Lieferant"]  # adjust to your headers
-res = reorder_columns(res, PREFERRED_ORDER)
-    
-st.subheader("Results")
+    res = reorder_columns(res, PREFERRED_ORDER)
+
+    st.subheader("Results")
 
     gb = GridOptionsBuilder.from_dataframe(res)
     gb.configure_default_column(resizable=True, wrapText=True, autoHeight=True)
@@ -447,9 +451,9 @@ with batch_col:
         else:
             dup_mask = pd.Series(False, index=batch.index)
 
-batch = reorder_columns(batch, PREFERRED_ORDER)
-st.session_state.batch = batch  # keep state consistent with new order
-        
+        batch = reorder_columns(batch, PREFERRED_ORDER)
+        st.session_state.batch = batch  # keep state consistent with new order
+
         batch_view = batch.copy()
         batch_view["dup"] = dup_mask
 
