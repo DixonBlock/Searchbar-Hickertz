@@ -28,7 +28,7 @@ st.markdown(
     """
 <style>
 /* Reduce Streamlit default padding/margins */
-.block-container { padding-top: 0.6rem; padding-bottom: 0.6rem; padding-left: 0.6rem; padding-right: 0.6rem; }
+.block-container { padding-top: 4.2rem; padding-bottom: 0.6rem; padding-left: 0.6rem; padding-right: 0.6rem; }
 div[data-testid="stVerticalBlock"] { gap: 0.35rem; }
 div[data-testid="column"] { padding-left: 0.15rem; padding-right: 0.15rem; }
 
@@ -40,7 +40,7 @@ h2, h3 { margin-top: 0.2rem; margin-bottom: 0.35rem; }
 div[data-testid="stMultiselect"], div[data-testid="stTextInput"] { margin-bottom: 0.15rem; }
 
 /* Slightly tighten AgGrid wrapper spacing */
-.stAgGrid { margin-top: 4.2rem; margin-bottom: 0.15rem; }
+.stAgGrid { margin-top: 0.15rem; margin-bottom: 0.15rem; }
 </style>
 """,
     unsafe_allow_html=True,
