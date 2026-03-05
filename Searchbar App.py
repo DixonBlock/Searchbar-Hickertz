@@ -32,8 +32,9 @@ st.markdown(
 div[data-testid="stVerticalBlock"] { gap: 0.35rem; }
 div[data-testid="column"] { padding-left: 0.15rem; padding-right: 0.15rem; }
 
-/* Reduce header spacing */
-h1, h2, h3 { margin-top: 0.2rem; margin-bottom: 0.35rem; }
+/* Reduce header spacing but keep title readable */
+h1 { margin-top: 0.6rem; margin-bottom: 0.4rem; }
+h2, h3 { margin-top: 0.2rem; margin-bottom: 0.35rem; }
 
 /* Reduce widget spacing slightly */
 div[data-testid="stMultiselect"], div[data-testid="stTextInput"] { margin-bottom: 0.15rem; }
