@@ -1,6 +1,8 @@
 # Searchbar App.py
 # Hickertz Quick Finder — keyboard-friendly results → batch list (duplicates allowed + highlighted)
 # Uses robust loader for BOTH uploads and default_data.csv (EU/US CSV compatible)
+# Layout: Search controls on top; Results (left) + Batch (right) underneath
+# Column widths: autosize-to-content with sensible caps; user-resizable
 
 import io
 import re
@@ -50,7 +52,9 @@ def _read_csv_bytes(file_bytes: bytes) -> pd.DataFrame:
             last_err = e
             continue
 
-    raise RuntimeError(f"Unable to read CSV (tried multiple encodings/delimiters). Last error: {last_err}")
+    raise RuntimeError(
+        f"Unable to read CSV (tried multiple encodings/delimiters). Last error: {last_err}"
+    )
 
 
 @st.cache_data(show_spinner=False)
@@ -107,7 +111,13 @@ def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
     lp_cols = []
     for c in cols:
         nc = _normalize_colname(c)
-        if "lp" == nc or " neue lp" in f" {nc} " or "lagerplatz" in nc or nc.endswith(" lp") or " lp " in f" {nc} ":
+        if (
+            nc == "lp"
+            or " neue lp" in f" {nc} "
+            or "lagerplatz" in nc
+            or nc.endswith(" lp")
+            or " lp " in f" {nc} "
+        ):
             lp_cols.append(c)
 
     if not lp_cols:
@@ -221,10 +231,11 @@ if article_col is None:
 # ---------------------------------------------------
 st.title("🧀 Hickertz Quick Finder")
 
-# Make batch panel wider by default (better descriptions)
-left, right = st.columns([1.25, 1.75], gap="large")
+# Controls (search/filters) on top; then Results + Batch underneath
+controls = st.container()
+results_col, batch_col = st.columns([2.2, 1.8], gap="large")
 
-# JS: Enter selects focused row; after selection keep focus usable
+# JS: Enter selects focused row; prevents Streamlit focus weirdness
 enter_select = JsCode(
     """
 function(e){
@@ -243,30 +254,42 @@ function(e){
 """
 )
 
-# JS: autosize columns to content up to a cap, then use remaining space sensibly
+# JS: autosize-to-content with sensible caps; NO sizeColumnsToFit (prevents messed proportions)
 first_data_rendered = JsCode(
     """
 function(e){
   try{
     const allCols = e.columnApi.getAllColumns().map(c => c.getColId());
+
+    // Autosize to content
     e.columnApi.autoSizeColumns(allCols, false);
 
-    // Cap overly wide columns (so Beschreibung gets space, IDs don't)
+    // Cap overly wide columns so key text columns keep space
     allCols.forEach(id => {
       const col = e.columnApi.getColumn(id);
       if(!col) return;
+
       const w = col.getActualWidth();
-      const maxW = (id.toLowerCase().includes('beschreib') ? 520 :
-                    id.toLowerCase().includes('liefer') ? 320 :
-                    id.toLowerCase().includes('art') ? 140 :
-                    id.toLowerCase().includes('lp') ? 160 : 260);
-      if(w > maxW){
-        e.columnApi.setColumnWidth(id, maxW, false);
-      }
+      const low = (id || '').toLowerCase();
+
+      const maxW =
+        (low.includes('beschreib') || low.includes('description')) ? 650 :
+        (low.includes('liefer')   || low.includes('vendor') || low.includes('supplier')) ? 360 :
+        (low.includes('art')      || low.includes('artikel') || low.includes('sku')) ? 160 :
+        (low.includes('lp')       || low.includes('lagerplatz')) ? 190 :
+        320;
+
+      const minW =
+        (low.includes('beschreib') || low.includes('description')) ? 260 :
+        (low.includes('liefer')   || low.includes('vendor') || low.includes('supplier')) ? 180 :
+        (low.includes('art')      || low.includes('artikel') || low.includes('sku')) ? 110 :
+        (low.includes('lp')       || low.includes('lagerplatz')) ? 120 :
+        120;
+
+      if(w > maxW) e.columnApi.setColumnWidth(id, maxW, false);
+      if(w < minW) e.columnApi.setColumnWidth(id, minW, false);
     });
 
-    // If there is extra space, fit to grid width
-    e.api.sizeColumnsToFit();
   } catch(err) {}
 }
 """
@@ -282,7 +305,7 @@ def _apply_column_layout(gb: GridOptionsBuilder, cols: list[str]):
             gb.configure_column(c, minWidth=260, flex=3, wrapText=True, autoHeight=True)
         elif "lieferant" in nc or "vendor" in nc or "supplier" in nc:
             gb.configure_column(c, minWidth=180, flex=2, wrapText=True, autoHeight=True)
-        elif nc.startswith("art") or "artikelnummer" in nc or "sku" in nc:
+        elif "artikelnummer" in nc or "article number" in nc or "sku" in nc or nc in ("art nr", "art nr.", "art. nr", "art. nr."):
             gb.configure_column(c, width=120, minWidth=95, maxWidth=160, flex=0)
         elif "lp" in nc or "lagerplatz" in nc:
             gb.configure_column(c, width=140, minWidth=110, maxWidth=190, flex=0)
@@ -291,11 +314,12 @@ def _apply_column_layout(gb: GridOptionsBuilder, cols: list[str]):
 
 
 # ---------------------------------------------------
-# SEARCH PANEL
+# CONTROLS (top)
 # ---------------------------------------------------
-with left:
+with controls:
     st.write(f"Rows loaded: {len(df):,}")
 
+    # moved above search input (as requested)
     cols = st.multiselect(
         "Columns to search",
         options=list(df.columns),
@@ -304,6 +328,11 @@ with left:
 
     search_query = st.text_input("Search", key="search_box")
 
+
+# ---------------------------------------------------
+# RESULTS (left)
+# ---------------------------------------------------
+with results_col:
     res = search_df(df, search_query.strip(), cols)
 
     st.subheader("Results")
@@ -341,9 +370,9 @@ with left:
 
 
 # ---------------------------------------------------
-# BATCH PANEL
+# BATCH (right)
 # ---------------------------------------------------
-with right:
+with batch_col:
     st.subheader("Batch List")
 
     batch = st.session_state.batch
