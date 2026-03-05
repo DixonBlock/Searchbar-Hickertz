@@ -395,7 +395,7 @@ with controls:
 with results_col:
     res = search_df(df, search_query.strip(), cols)
 
-    PREFERRED_ORDER = ["Art. Nr.", "Bezeichnung", "Neue LP", "Lieferant"]  # adjust to your headers
+    PREFERRED_ORDER = ["Art. Nr.", "Beschreibung", "Neue LP", "Lieferant"]  # adjust to your headers
     res = reorder_columns(res, PREFERRED_ORDER)
 
     st.subheader("Results")
