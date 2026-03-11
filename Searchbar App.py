@@ -209,7 +209,7 @@ def search_df(df: pd.DataFrame, query: str, cols: list[str]) -> pd.DataFrame:
     # Normalize query (lower + strip accents)
     terms_norm = [strip_accents(t).lower() for t in terms]
 
-    mask = pd.Series(False, index=df.index)
+    mask = pd.Series(True, index=df.index)
 
     for term_norm in terms_norm:
         # Match across any selected column
@@ -223,7 +223,7 @@ def search_df(df: pd.DataFrame, query: str, cols: list[str]) -> pd.DataFrame:
             s = df[c].astype(str).map(strip_accents).str.lower()
             matches |= s.str.contains(term_esc, case=False, na=False, regex=True)
 
-        mask |= matches
+        mask &= matches
 
     return df[mask]
 
