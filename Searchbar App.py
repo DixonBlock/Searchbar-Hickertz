@@ -21,6 +21,16 @@ from st_aggrid import (
 
 st.set_page_config(page_title="Quick Finder", page_icon="🧀", layout="wide")
 
+st.markdown("""
+<link rel="manifest" href="manifest.json">
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+}
+</script>
+""", unsafe_allow_html=True)
+
 # ---------------------------------------------------
 # TIGHT UI (reduce padding / maximize data space)
 # ---------------------------------------------------
