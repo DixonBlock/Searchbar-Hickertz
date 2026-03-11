@@ -1,5 +1,5 @@
 # Searchbar App.py
-# Hickertz Quick Finder — keyboard-friendly results → batch list (duplicates allowed + highlighted)
+# Hickertz Quick Search — keyboard-friendly results → batch list (duplicates allowed + highlighted)
 # Dark mode + tight padding + robust loader (EU/US CSV compatible)
 # Layout: Controls on top; Results (left) + Batch (right) underneath
 # Column widths: autosize-to-content with caps + enforced minimums; user-resizable
@@ -19,7 +19,7 @@ from st_aggrid import (
     JsCode,
 )
 
-st.set_page_config(page_title="Quick Finder", page_icon="🧀", layout="wide")
+st.set_page_config(page_title="Quick Search", page_icon="🧀", layout="wide")
 
 st.markdown("""
 <link rel="manifest" href="manifest.json">
@@ -289,7 +289,7 @@ def reorder_columns(df: pd.DataFrame, first: list[str] | None = None) -> pd.Data
 # ---------------------------------------------------
 # UI
 # ---------------------------------------------------
-st.title("🧀 Hickertz Quick Finder")
+st.title("🧀 Hickertz Quick Search")
 
 controls = st.container()
 results_col, batch_col = st.columns([2.25, 1.75], gap="medium")
