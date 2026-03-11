@@ -279,26 +279,7 @@ def reorder_columns(df: pd.DataFrame, first: list[str] | None = None) -> pd.Data
 # ---------------------------------------------------
 # UI
 # ---------------------------------------------------
-header_left, header_mid, header_right = st.columns([2.5, 1.2, 1.5], gap="small")
-
-with header_left:
-    st.title("🧀 Hickertz Quick Finder")
-
-with header_mid:
-    lang_de = st.toggle("Deutsch", value=False)
-
-with header_right:
-    uploaded = st.file_uploader(
-        "Upload CSV / Excel",
-        type=["csv", "xlsx", "xls"]
-    )
-
-sheet = None
-if uploaded and uploaded.name.lower().endswith(("xlsx", "xls")):
-    sheet = st.text_input(
-        "Excel sheet name (optional)",
-        value=""
-    ).strip() or None
+st.title("🧀 Hickertz Quick Finder")
 
 controls = st.container()
 results_col, batch_col = st.columns([2.25, 1.75], gap="medium")
@@ -431,11 +412,8 @@ with results_col:
         onFirstDataRendered=first_data_rendered,
         suppressRowClickSelection=False,
         rowSelection="single",
+        # helps keep navigation smooth
         suppressCellFocus=False,
-        sortModel=[
-            {"colId": "Neue LP", "sort": "asc"},
-            {"colId": "Art. Nr.", "sort": "asc"},
-        ],
     )
 
     grid = AgGrid(
