@@ -1,6 +1,6 @@
 {
-  "name": "Hickertz Quick Finder",
-  "short_name": "Quick Finder",
+  "name": "Hickertz Quick Search",
+  "short_name": "Quick Search",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0e1117",
