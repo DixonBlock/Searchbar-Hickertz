@@ -437,7 +437,8 @@ with results_col:
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=False,
-        theme="streamlit",  # <- dark-mode friendly (matches Streamlit theme)
+        theme="streamlit", # <- dark-mode friendly (matches Streamlit theme)
+        key=f"results_grid_{st.session_state.results_grid_key}",    
     )
 
     selected = grid.get("selected_rows", [])
@@ -445,7 +446,9 @@ with results_col:
 
     # Allow duplicates
     if not sel_df.empty:
-        st.session_state.batch = pd.concat([st.session_state.batch, sel_df], ignore_index=True)
+    st.session_state.batch = pd.concat([st.session_state.batch, sel_df], ignore_index=True)
+    st.session_state.results_grid_key += 1
+    st.rerun()
 
 
 # ---------------------------------------------------
