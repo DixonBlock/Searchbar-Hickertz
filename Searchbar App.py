@@ -533,8 +533,10 @@ function(params){
                     cur = st.session_state.batch.copy()
 
                     # Remove matching rows one-by-one (keeps duplicates distinct)
-                    for _, row in del_df.iterrows():
-                        idx = cur[(cur == row).all(axis=1)].index
+                  for _, row in del_df.iterrows():
+                        shared_cols = [c for c in cur.columns if c in row.index]
+                        row_values = row[shared_cols]
+                        idx = cur[(cur[shared_cols] == row_values).all(axis=1)].index
                         if len(idx) > 0:
                             cur = cur.drop(idx[0])
 
