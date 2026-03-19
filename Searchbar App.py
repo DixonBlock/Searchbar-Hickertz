@@ -446,9 +446,9 @@ with results_col:
 
     # Allow duplicates
     if not sel_df.empty:
-    st.session_state.batch = pd.concat([st.session_state.batch, sel_df], ignore_index=True)
-    st.session_state.results_grid_key += 1
-    st.rerun()
+        st.session_state.batch = pd.concat([st.session_state.batch, sel_df], ignore_index=True)
+        st.session_state.results_grid_key += 1
+        st.rerun()
 
 
 # ---------------------------------------------------
