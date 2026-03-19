@@ -62,6 +62,9 @@ div[data-testid="stMultiselect"], div[data-testid="stTextInput"] { margin-bottom
 if "batch" not in st.session_state:
     st.session_state.batch = pd.DataFrame()
 
+if "results_grid_key" not in st.session_state:
+    st.session_state.results_grid_key = 0
+
 
 # ---------------------------------------------------
 # LOADERS (robust + EU/US CSV compatible)
