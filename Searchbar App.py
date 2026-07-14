@@ -160,7 +160,7 @@ def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
     if not lp_cols:
         return df
 
-   def convert_one(x: str) -> str:
+def convert_one(x: str) -> str:
     s = str(x).strip()
 
     if not s or s.lower() in ("nan", "none", "nat"):
