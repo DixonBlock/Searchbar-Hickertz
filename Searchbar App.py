@@ -500,14 +500,14 @@ function(params){
         _apply_column_layout(gb2, [c for c in batch_view.columns if c != "dup"], article_col_name=article_col)
 
       gb2.configure_grid_options(
-        rowDragManaged=True,
-        animateRows=True,
-        getRowStyle=highlight,
-        onFirstDataRendered=first_data_rendered,
-        suppressCellFocus=False,
-        enableCellTextSelection=True,
-        ensureDomOrder=True,
-)
+            rowDragManaged=True,
+            animateRows=True,
+            getRowStyle=highlight,
+            onFirstDataRendered=first_data_rendered,
+            suppressCellFocus=False,
+            enableCellTextSelection=True,
+            ensureDomOrder=True,
+        )
 
         batch_grid = AgGrid(
             batch_view,
