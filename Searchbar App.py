@@ -394,10 +394,15 @@ def _apply_column_layout(gb: GridOptionsBuilder, cols: list[str], article_col_na
 with controls:
     st.write(f"Rows loaded: {len(df):,}")
 
+    visible_search_columns = [
+    c for c in df.columns
+    if c != "Matchcode"
+    ]
+
     cols = st.multiselect(
         "Columns to search",
-        options=list(df.columns),
-        default=list(df.columns),
+        options=visible_search_columns,
+        default=visible_search_columns,
     )
 
     search_query = st.text_input("Search", key="search_box")
