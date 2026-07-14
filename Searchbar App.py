@@ -497,7 +497,7 @@ function(params){
         # Delete selected rows via checkbox selection
         gb2.configure_selection("multiple", use_checkbox=True)
 
-              _apply_column_layout(
+        _apply_column_layout(
             gb2,
             [c for c in batch_view.columns if c != "dup"],
             article_col_name=article_col,
