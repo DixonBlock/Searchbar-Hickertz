@@ -122,183 +122,169 @@ def _normalize_colname(c: str) -> str:
 
 
 MONTHS = {
-    # German
     "jan": "01", "januar": "01",
     "feb": "02", "februar": "02",
     "mär": "03", "maer": "03", "maerz": "03", "märz": "03",
+    "mar": "03",
     "apr": "04", "april": "04",
-    "mai": "05",
+    "mai": "05", "may": "05",
     "jun": "06", "juni": "06",
     "jul": "07", "juli": "07",
     "aug": "08", "august": "08",
     "sep": "09", "sept": "09", "september": "09",
-    "okt": "10", "oktober": "10",
+    "okt": "10", "oktober": "10", "oct": "10",
     "nov": "11", "november": "11",
-    "dez": "12", "dezember": "12",
-    # English
-    "jan.": "01", "feb.": "02", "mar": "03", "mar.": "03",
-    "apr.": "04", "may": "05", "jun.": "06", "jul.": "07",
-    "aug.": "08", "sep.": "09", "oct": "10", "oct.": "10",
-    "nov.": "11", "dec": "12", "dec.": "12",
+    "dez": "12", "dezember": "12", "dec": "12",
 }
 
 
 def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
     cols = list(df.columns)
     lp_cols = []
+
     for c in cols:
         nc = _normalize_colname(c)
+
         if (
             nc == "lp"
-            or " neue lp" in f" {nc} "
+            or "neue lp" in nc
             or "lagerplatz" in nc
             or nc.endswith(" lp")
-            or " lp " in f" {nc} "
         ):
             lp_cols.append(c)
 
     if not lp_cols:
         return df
 
-def convert_one(x: str) -> str:
-    s = str(x).strip()
+    def convert_one(x: str) -> str:
+        s = str(x).strip()
 
-    if not s or s.lower() in ("nan", "none", "nat"):
-        return ""
+        if not s or s.lower() in ("nan", "none", "nat"):
+            return ""
 
-    # Already correct: 01-01
-    if re.fullmatch(r"\d{1,2}-\d{1,2}", s):
-        first, second = s.split("-")
-        return f"{first.zfill(2)}-{second.zfill(2)}"
+        if re.fullmatch(r"\d{1,2}-\d{1,2}", s):
+            first, second = s.split("-")
+            return f"{first.zfill(2)}-{second.zfill(2)}"
 
-    # Excel date serials such as 45292
-    if re.fullmatch(r"\d{5}(?:\.0)?", s):
-        try:
-            date_value = pd.to_datetime(
-                float(s),
-                unit="D",
-                origin="1899-12-30",
-            )
-            return date_value.strftime("%d-%m")
-        except Exception:
-            pass
+        if re.fullmatch(r"\d{5}(?:\.0)?", s):
+            try:
+                date_value = pd.to_datetime(
+                    float(s),
+                    unit="D",
+                    origin="1899-12-30",
+                )
+                return date_value.strftime("%d-%m")
+            except Exception:
+                pass
 
-    cleaned = (
-        s.lower()
-        .replace("ä", "ae")
-        .replace("ö", "oe")
-        .replace("ü", "ue")
-        .replace(",", "")
-        .strip()
-    )
+        cleaned = (
+            s.lower()
+            .replace("ä", "ae")
+            .replace("ö", "oe")
+            .replace("ü", "ue")
+            .replace(",", "")
+            .strip()
+        )
 
-    month_lookup = {
-        "jan": "01",
-        "januar": "01",
-        "feb": "02",
-        "februar": "02",
-        "mar": "03",
-        "maer": "03",
-        "maerz": "03",
-        "apr": "04",
-        "april": "04",
-        "mai": "05",
-        "may": "05",
-        "jun": "06",
-        "juni": "06",
-        "jul": "07",
-        "juli": "07",
-        "aug": "08",
-        "sep": "09",
-        "sept": "09",
-        "september": "09",
-        "okt": "10",
-        "oct": "10",
-        "nov": "11",
-        "dez": "12",
-        "dec": "12",
-    }
+        match = re.match(
+            r"^\s*(\d{1,2})[\.\-/\s]+([a-z]+)\.?(?:\s+\d{2,4})?\s*$",
+            cleaned,
+        )
 
-    # Examples: 01. Jan, 01-Jan, 01 Jan., 1 Januar
-    match = re.match(
-        r"^\s*(\d{1,2})[\.\-/\s]+([a-z]+)\.?(?:\s+\d{2,4})?\s*$",
-        cleaned,
-    )
+        if match:
+            day = match.group(1).zfill(2)
+            month = MONTHS.get(match.group(2))
 
-    if match:
-        day = match.group(1).zfill(2)
-        month = month_lookup.get(match.group(2))
+            if month:
+                return f"{day}-{month}"
 
-        if month:
+        match = re.match(
+            r"^\s*(\d{4})[-/](\d{1,2})[-/](\d{1,2})",
+            s,
+        )
+
+        if match:
+            month = match.group(2).zfill(2)
+            day = match.group(3).zfill(2)
             return f"{day}-{month}"
 
-    # Examples: 2026-01-01 or 2026-01-01 00:00:00
-    match = re.match(
-        r"^\s*(\d{4})[-/](\d{1,2})[-/](\d{1,2})",
-        s,
-    )
+        match = re.match(
+            r"^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+            s,
+        )
 
-    if match:
-        month = match.group(2).zfill(2)
-        day = match.group(3).zfill(2)
-        return f"{day}-{month}"
+        if match:
+            day = match.group(1).zfill(2)
+            month = match.group(2).zfill(2)
+            return f"{day}-{month}"
 
-    # Examples: 01/01/2026, 01.01.2026
-    match = re.match(
-        r"^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
-        s,
-    )
-
-    if match:
-        day = match.group(1).zfill(2)
-        month = match.group(2).zfill(2)
-        return f"{day}-{month}"
-
-    return s
+        return s
 
     out = df.copy()
+
     for c in lp_cols:
         out[c] = out[c].astype(str).map(convert_one)
+
     return out
 
 
 def strip_accents(s: str) -> str:
-    # NFKD decomposes accented chars into base + combining marks
     s = unicodedata.normalize("NFKD", str(s))
-    # remove combining marks
-    s = "".join(ch for ch in s if not unicodedata.combining(ch))
-    return s
+    return "".join(
+        ch for ch in s
+        if not unicodedata.combining(ch)
+    )
 
 
 # ---------------------------------------------------
 # SEARCH
 # ---------------------------------------------------
-def search_df(df: pd.DataFrame, query: str, cols: list[str]) -> pd.DataFrame:
+def search_df(
+    df: pd.DataFrame,
+    query: str,
+    cols: list[str],
+) -> pd.DataFrame:
     if not query:
         return df
 
-    # Split into terms, supporting quoted phrases
     terms = re.findall(r'"([^"]+)"|(\S+)', query)
-    terms = [t[0] or t[1] for t in terms if (t[0] or t[1])]
+    terms = [
+        t[0] or t[1]
+        for t in terms
+        if t[0] or t[1]
+    ]
+
     if not terms:
         return df
 
-    # Normalize query (lower + strip accents)
-    terms_norm = [strip_accents(t).lower() for t in terms]
+    terms_norm = [
+        strip_accents(term).lower()
+        for term in terms
+    ]
 
     mask = pd.Series(True, index=df.index)
 
     for term_norm in terms_norm:
-        # Match across any selected column
         matches = pd.Series(False, index=df.index)
-
-        # Use escaped regex term
         term_esc = re.escape(term_norm)
 
         for c in cols:
-            # Normalize cell text (lower + strip accents) on the fly
-            s = df[c].astype(str).map(strip_accents).str.lower()
-            matches |= s.str.contains(term_esc, case=False, na=False, regex=True)
+            if c not in df.columns:
+                continue
+
+            series = (
+                df[c]
+                .astype(str)
+                .map(strip_accents)
+                .str.lower()
+            )
+
+            matches |= series.str.contains(
+                term_esc,
+                case=False,
+                na=False,
+                regex=True,
+            )
 
         mask &= matches
 
