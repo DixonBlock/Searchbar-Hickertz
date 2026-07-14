@@ -69,7 +69,6 @@ if "results_grid_key" not in st.session_state:
 # ---------------------------------------------------
 # LOADERS (robust + EU/US CSV compatible)
 # ---------------------------------------------------
-@st.cache_data(show_spinner=False)
 def _read_csv_bytes(file_bytes: bytes) -> pd.DataFrame:
     encodings = ["utf-8-sig", "utf-8", "cp1252", "latin-1"]
 
@@ -105,12 +104,14 @@ def load_file(file_bytes: bytes, filename: str, sheet=None) -> pd.DataFrame:
     return _read_csv_bytes(file_bytes)
 
 
-@st.cache_data(show_spinner=False)
 def load_default() -> pd.DataFrame | None:
-    default_path = Path("default_data.csv")
+    default_path = Path(__file__).parent / "default_data.csv"
+
     if not default_path.exists():
         return None
-    return _read_csv_bytes(default_path.read_bytes())
+
+    file_bytes = default_path.read_bytes()
+    return _read_csv_bytes(file_bytes)
 
 
 # ---------------------------------------------------
@@ -261,9 +262,9 @@ else:
 
 df = df.astype(str)
 df = normalize_lagerplatz_values(df)
-st.write(df.shape)
-st.write(df.columns.tolist())
-st.write(df.head(2))
+st.write("Loaded from:", str(Path(__file__).parent / "default_data.csv"))
+st.write("Shape:", df.shape)
+st.write("Columns:", df.columns.tolist())
 
 # ---------------------------------------------------
 # AUTO DETECT ARTICLE COLUMN (unique identifier)
