@@ -485,6 +485,7 @@ with batch_col:
         else:
             dup_mask = pd.Series(False, index=batch.index)
 
+        batch = batch.drop(columns=["Matchcode"], errors="ignore")
         batch = reorder_columns(batch, PREFERRED_ORDER)
         st.session_state.batch = batch  # keep state consistent with new order
 
