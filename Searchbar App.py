@@ -423,6 +423,8 @@ with results_col:
         effective_search_columns,
     )
 
+    res = res.drop(columns=["Matchcode"], errors="ignore")
+
     PREFERRED_ORDER = ["Art. Nr.", "Beschreibung", "Neue LP", "Lieferant"]  # adjust to your headers
     res = reorder_columns(res, PREFERRED_ORDER)
 
