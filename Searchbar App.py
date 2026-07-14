@@ -412,7 +412,16 @@ with controls:
 # RESULTS (left)
 # ---------------------------------------------------
 with results_col:
-    res = search_df(df, search_query.strip(), cols)
+    effective_search_columns = list(cols)
+
+    if "Matchcode" in df.columns:
+        effective_search_columns.append("Matchcode")
+
+    res = search_df(
+        df,
+        search_query.strip(),
+        effective_search_columns,
+    )
 
     PREFERRED_ORDER = ["Art. Nr.", "Beschreibung", "Neue LP", "Lieferant"]  # adjust to your headers
     res = reorder_columns(res, PREFERRED_ORDER)
