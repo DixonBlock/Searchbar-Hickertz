@@ -499,7 +499,7 @@ function(params){
 
         _apply_column_layout(gb2, [c for c in batch_view.columns if c != "dup"], article_col_name=article_col)
 
-      gb2.configure_grid_options(
+          gb2.configure_grid_options(
             rowDragManaged=True,
             animateRows=True,
             getRowStyle=highlight,
