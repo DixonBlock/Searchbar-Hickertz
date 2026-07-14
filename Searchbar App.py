@@ -425,8 +425,9 @@ with results_col:
         onFirstDataRendered=first_data_rendered,
         suppressRowClickSelection=False,
         rowSelection="single",
-        # helps keep navigation smooth
         suppressCellFocus=False,
+        enableCellTextSelection=True,
+        ensureDomOrder=True,
     )
 
     grid = AgGrid(
@@ -498,13 +499,15 @@ function(params){
 
         _apply_column_layout(gb2, [c for c in batch_view.columns if c != "dup"], article_col_name=article_col)
 
-        gb2.configure_grid_options(
-            rowDragManaged=True,
-            animateRows=True,
-            getRowStyle=highlight,
-            onFirstDataRendered=first_data_rendered,
-            suppressCellFocus=False,
-        )
+      gb2.configure_grid_options(
+        rowDragManaged=True,
+        animateRows=True,
+        getRowStyle=highlight,
+        onFirstDataRendered=first_data_rendered,
+        suppressCellFocus=False,
+        enableCellTextSelection=True,
+        ensureDomOrder=True,
+)
 
         batch_grid = AgGrid(
             batch_view,
