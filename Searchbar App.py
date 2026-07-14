@@ -160,38 +160,101 @@ def normalize_lagerplatz_values(df: pd.DataFrame) -> pd.DataFrame:
     if not lp_cols:
         return df
 
-    def convert_one(x: str) -> str:
-        s = str(x).strip()
-        if not s or s.lower() in ("nan", "none"):
-            return ""
+   def convert_one(x: str) -> str:
+    s = str(x).strip()
 
-        if re.fullmatch(r"\d{1,2}-\d{1,2}", s):
-            dd, mm = s.split("-")
-            return f"{dd.zfill(2)}-{mm.zfill(2)}"
+    if not s or s.lower() in ("nan", "none", "nat"):
+        return ""
 
-        m = re.match(r"^\s*(\d{1,2})\.\s*([A-Za-zÄÖÜäöü\.]+)\s*$", s)
-        if m:
-            dd = m.group(1).zfill(2)
-            mon_raw = m.group(2).strip().lower()
-            mon_raw = mon_raw.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
-            mon_raw = mon_raw.strip(".")
-            mm = MONTHS.get(mon_raw)
-            if mm:
-                return f"{dd}-{mm}"
+    # Already correct: 01-01
+    if re.fullmatch(r"\d{1,2}-\d{1,2}", s):
+        first, second = s.split("-")
+        return f"{first.zfill(2)}-{second.zfill(2)}"
 
-        m = re.match(r"^\s*(\d{4})[-/](\d{1,2})[-/](\d{1,2}).*$", s)
-        if m:
-            mm = m.group(2).zfill(2)
-            dd = m.group(3).zfill(2)
-            return f"{dd}-{mm}"
+    # Excel date serials such as 45292
+    if re.fullmatch(r"\d{5}(?:\.0)?", s):
+        try:
+            date_value = pd.to_datetime(
+                float(s),
+                unit="D",
+                origin="1899-12-30",
+            )
+            return date_value.strftime("%d-%m")
+        except Exception:
+            pass
 
-        m = re.match(r"^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4}).*$", s)
-        if m:
-            dd = m.group(1).zfill(2)
-            mm = m.group(2).zfill(2)
-            return f"{dd}-{mm}"
+    cleaned = (
+        s.lower()
+        .replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace(",", "")
+        .strip()
+    )
 
-        return s
+    month_lookup = {
+        "jan": "01",
+        "januar": "01",
+        "feb": "02",
+        "februar": "02",
+        "mar": "03",
+        "maer": "03",
+        "maerz": "03",
+        "apr": "04",
+        "april": "04",
+        "mai": "05",
+        "may": "05",
+        "jun": "06",
+        "juni": "06",
+        "jul": "07",
+        "juli": "07",
+        "aug": "08",
+        "sep": "09",
+        "sept": "09",
+        "september": "09",
+        "okt": "10",
+        "oct": "10",
+        "nov": "11",
+        "dez": "12",
+        "dec": "12",
+    }
+
+    # Examples: 01. Jan, 01-Jan, 01 Jan., 1 Januar
+    match = re.match(
+        r"^\s*(\d{1,2})[\.\-/\s]+([a-z]+)\.?(?:\s+\d{2,4})?\s*$",
+        cleaned,
+    )
+
+    if match:
+        day = match.group(1).zfill(2)
+        month = month_lookup.get(match.group(2))
+
+        if month:
+            return f"{day}-{month}"
+
+    # Examples: 2026-01-01 or 2026-01-01 00:00:00
+    match = re.match(
+        r"^\s*(\d{4})[-/](\d{1,2})[-/](\d{1,2})",
+        s,
+    )
+
+    if match:
+        month = match.group(2).zfill(2)
+        day = match.group(3).zfill(2)
+        return f"{day}-{month}"
+
+    # Examples: 01/01/2026, 01.01.2026
+    match = re.match(
+        r"^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+        s,
+    )
+
+    if match:
+        day = match.group(1).zfill(2)
+        month = match.group(2).zfill(2)
+        return f"{day}-{month}"
+
+    return s
 
     out = df.copy()
     for c in lp_cols:
