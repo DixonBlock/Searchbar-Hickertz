@@ -261,7 +261,9 @@ else:
 
 df = df.astype(str)
 df = normalize_lagerplatz_values(df)
+st.write(df.shape)
 st.write(df.columns.tolist())
+st.write(df.head(2))
 
 # ---------------------------------------------------
 # AUTO DETECT ARTICLE COLUMN (unique identifier)
