@@ -497,9 +497,13 @@ function(params){
         # Delete selected rows via checkbox selection
         gb2.configure_selection("multiple", use_checkbox=True)
 
-        _apply_column_layout(gb2, [c for c in batch_view.columns if c != "dup"], article_col_name=article_col)
+              _apply_column_layout(
+            gb2,
+            [c for c in batch_view.columns if c != "dup"],
+            article_col_name=article_col,
+        )
 
-          gb2.configure_grid_options(
+        gb2.configure_grid_options(
             rowDragManaged=True,
             animateRows=True,
             getRowStyle=highlight,
@@ -517,9 +521,9 @@ function(params){
             update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.SELECTION_CHANGED,
             allow_unsafe_jscode=True,
             fit_columns_on_grid_load=False,
-            theme="streamlit",  # <- dark-mode friendly
+            theme="streamlit",
         )
-
+        
         new_data = batch_grid.get("data")
         if isinstance(new_data, pd.DataFrame):
             if "dup" in new_data.columns:
