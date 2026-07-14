@@ -261,7 +261,7 @@ else:
 
 df = df.astype(str)
 df = normalize_lagerplatz_values(df)
-
+st.write(df.columns.tolist())
 
 # ---------------------------------------------------
 # AUTO DETECT ARTICLE COLUMN (unique identifier)
