@@ -262,9 +262,6 @@ else:
 
 df = df.astype(str)
 df = normalize_lagerplatz_values(df)
-st.write("Loaded from:", str(Path(__file__).parent / "default_data.csv"))
-st.write("Shape:", df.shape)
-st.write("Columns:", df.columns.tolist())
 
 # ---------------------------------------------------
 # AUTO DETECT ARTICLE COLUMN (unique identifier)
