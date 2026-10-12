@@ -463,20 +463,20 @@ Art. Nr.;Beschreibung;Neue LP;Lieferant (Haupt);Matchcode
 1501;Bayernland Emmentaler Block ;03-02;Privat;
 1502;Bayernland Chester Block;03-02;Privat;
 1503;Robiola Frischkäse;06-03;Privat;
-1504;Landfrischkäse 2x3.5 kg;03-02;Privat;
-1505;Landfrischkäse 2x1.5 kg;03-02;Privat;
+1504;Landfrischkäse 2x3.5 kg;03-02;Privat;FK Frischkäse
+1505;Landfrischkäse 2x1.5 kg;03-02;Privat;FK Frischkäse
 1508;Hochland Cheddar Schb. X8;VB;Privat;
 1511;Lindenberger;VB;Privat;
-1550;Philidelphia 1.65kg;VB;Privat;
-1560;Philadelphia 1.65kg Leicht Kräuter;VB;Privat;
-1562;Phil. Kr. Balance;VB;Privat;
-1563;Phil. Schnittlauch;VB;Privat;
-1565;Phliadelphia 175g;VB;Privat;SB
-1566;Phliadelphia Milka 150g;VB;Privat;SB
-1568;Phliadelphia Joghurt;VB;Privat;
-1569;Philadelphia Lactosefrei 10x150g;VB;Privat;SB
+1550;Philidelphia 1.65kg;VB;Privat;FK Frischkäse
+1560;Philadelphia 1.65kg Leicht Kräuter;VB;Privat;FK Frischkäse
+1562;Phil. Kr. Balance;VB;Privat;FK Frischkäse
+1563;Phil. Schnittlauch;VB;Privat;FK Frischkäse
+1565;Phliadelphia 175g;VB;Privat;SB FK Frischkäse
+1566;Phliadelphia Milka 150g;VB;Privat;SB FK Frischkäse
+1568;Phliadelphia Joghurt;VB;Privat;FK Frischkäse
+1569;Philadelphia Lactosefrei 10x150g;VB;Privat;SB FK Frischkäse
 1571;Exquisa Fitline 0.2% 200g;VB;Privat;
-1572;Philadelphia  FK 10kg;VB;Privat;Frischkäse
+1572;Philadelphia  FK 10kg;VB;Privat;FK Frischkäse
 1600;Kräuterhexe Laib;VB;Privat;
 1601;Dolomitenkönig;VB;Privat;
 1602;Dolomit;01-01;Privat;
@@ -1098,3 +1098,6 @@ Art. Nr.;Beschreibung;Neue LP;Lieferant (Haupt);Matchcode
 7864;Jurassic pink;VB;Privat;
 1605;Schwarzensteiner;VB;Privat;
 1041;St. Maure Ziegenrolle 200g;VB;Privat;Saint
+1551;Philidelphia Balance 1,65kg;VB;Privat;FK Frischkäse
+1555;Philadelphia 1,65kg Kräuter;VB;Privat;FK Frischkäse
+
